@@ -1,0 +1,22 @@
+# Large dataset files — do not commit
+*.zip
+images/
+cancerous/
+non_cancerous/
+train/
+test/
+
+# Trained model — too large for git (29 MB+), teammates run train_model.py
+model.pkl
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# OS / editor
+.DS_Store
+Thumbs.db
+
+# Secrets / env
+.env

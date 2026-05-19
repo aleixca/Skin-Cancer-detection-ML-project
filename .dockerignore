@@ -1,0 +1,18 @@
+# Large dataset files — not needed at inference time
+images/
+*.zip
+HAM10000_metadata
+*.csv
+
+# Training-only scripts
+train_model.py
+train_test_split.py
+sort_images.py
+
+# Dev / editor files
+.claude/
+__pycache__/
+*.pyc
+*.pyo
+*.c
+README.md
