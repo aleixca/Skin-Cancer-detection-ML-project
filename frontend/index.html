@@ -72,47 +72,20 @@
   <script type="text/babel" src="screens.jsx"></script>
 
   <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+    const { useState, useEffect } = React;
 
-    // ── Navigation map: text/aria patterns → target screen ──────────────────
-    const NAV_MAP = [
-      // home → scan
-      { pattern: /new scan|start scan|🔬/i,         target: 'scan'      },
-      // scan → analyzing (simulate analyze tap)
-      { pattern: /^analyze$|^scan now$|analyze lesion/i, target: 'analyzing' },
-      // analyzing → result (auto-advance handled separately)
-      // result → home
-      { pattern: /back to home|new scan/i,           target: 'home'      },
-      // bottom nav
-      { pattern: /^home$/i,                          target: 'home'      },
-      { pattern: /^scan$/i,                          target: 'scan'      },
-      { pattern: /ai chat|^chat$/i,                  target: 'chat'      },
-      { pattern: /info|v0 info/i,                    target: 'info'      },
-      // back arrows
-      { pattern: /^←$|^‹$|^back$/i,                 target: 'home'      },
-    ];
-
-    function getNavTarget(el) {
-      const text = (el.textContent || el.getAttribute('aria-label') || '').trim();
-      for (const { pattern, target } of NAV_MAP) {
-        if (pattern.test(text)) return target;
-      }
-      return null;
-    }
-
-    // ── Screen components map ─────────────────────────────────────────────────
+    // ── Screen components map (pass onNav so buttons work) ───────────────────
     const SCREEN_COMPS = {
-      home:      () => window.ScreenHome      ? <ScreenHome />      : null,
-      scan:      () => window.ScreenScan      ? <ScreenScan />      : null,
-      analyzing: () => window.ScreenAnalyzing ? <ScreenAnalyzing /> : null,
-      result:    () => window.ScreenResult    ? <ScreenResult />    : null,
-      chat:      () => window.ScreenChat      ? <ScreenChat />      : null,
-      info:      () => window.ScreenInfo      ? <ScreenInfo />      : null,
+      home:      (nav) => window.ScreenHome      ? <ScreenHome      onNav={nav} /> : null,
+      scan:      (nav) => window.ScreenScan      ? <ScreenScan      onNav={nav} /> : null,
+      analyzing: (nav) => window.ScreenAnalyzing ? <ScreenAnalyzing onNav={nav} /> : null,
+      result:    (nav) => window.ScreenResult    ? <ScreenResult    onNav={nav} /> : null,
+      chat:      (nav) => window.ScreenChat      ? <ScreenChat      onNav={nav} /> : null,
+      info:      (nav) => window.ScreenInfo      ? <ScreenInfo      onNav={nav} /> : null,
     };
 
     function App() {
       const [screen, setScreen] = useState('home');
-      const frameRef = useRef(null);
 
       // Expose navigate globally so screens can call window.navigate('scan')
       useEffect(() => {
@@ -127,33 +100,19 @@
         }
       }, [screen]);
 
-      // Intercept button/div clicks inside the phone frame → navigate
-      useEffect(() => {
-        const frame = frameRef.current;
-        if (!frame) return;
-        const handler = (e) => {
-          const el = e.target.closest('button, [role="button"], a, [onclick]');
-          if (!el) return;
-          const target = getNavTarget(el);
-          if (target) { e.preventDefault(); setScreen(target); }
-        };
-        frame.addEventListener('click', handler);
-        return () => frame.removeEventListener('click', handler);
-      }, [screen]);
-
       const Comp = SCREEN_COMPS[screen];
 
       return (
-        <div ref={frameRef} style={{ paddingBottom: 40 }}>
+        <div style={{ paddingBottom: 40 }}>
           {window.IOSDevice
-            ? <IOSDevice><Comp /></IOSDevice>
+            ? <IOSDevice>{Comp(setScreen)}</IOSDevice>
             : (
               <div style={{
                 width: 402, height: 874, background: '#FAFAF7',
                 borderRadius: 44, overflow: 'hidden',
                 boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
               }}>
-                <Comp />
+                {Comp(setScreen)}
               </div>
             )
           }
