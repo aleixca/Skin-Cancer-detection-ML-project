@@ -3,14 +3,12 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>DermaScan ML — Design Preview</title>
+  <title>DermaScan ML</title>
 
-  <!-- React + Babel standalone (no build step needed) -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
@@ -21,72 +19,31 @@
     body {
       background: #0E1116;
       min-height: 100vh;
-      font-family: "Inter Tight", "Inter", -apple-system, system-ui, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: "Inter Tight", system-ui, sans-serif;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* ── Top bar ── */
-    #topbar {
-      position: fixed; top: 0; left: 0; right: 0; z-index: 100;
-      height: 52px;
-      background: rgba(14,17,22,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255,255,255,0.07);
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px;
-    }
-    #topbar .logo {
-      font-size: 15px; font-weight: 700; color: #FAFAF7; letter-spacing: -0.3px;
-    }
-    #topbar .badge {
-      font-size: 10px; font-weight: 600; letter-spacing: 0.8px;
-      color: rgba(250,250,247,0.45); text-transform: uppercase;
-    }
-
-    /* ── Tab strip ── */
-    #tabs {
-      position: fixed; top: 52px; left: 0; right: 0; z-index: 99;
-      display: flex; gap: 4px; padding: 10px 24px;
-      background: rgba(14,17,22,0.85);
-      backdrop-filter: blur(12px);
-      border-bottom: 1px solid rgba(255,255,255,0.05);
-    }
-    .tab-btn {
-      padding: 6px 14px; border-radius: 20px; border: none; cursor: pointer;
-      font-family: inherit; font-size: 12px; font-weight: 600; letter-spacing: -0.1px;
-      transition: all 0.15s;
-      background: rgba(255,255,255,0.06); color: rgba(250,250,247,0.55);
-    }
-    .tab-btn:hover { background: rgba(255,255,255,0.1); color: rgba(250,250,247,0.8); }
-    .tab-btn.active { background: #FAFAF7; color: #0E1116; }
-
-    /* ── Canvas ── */
-    #canvas {
-      padding-top: 108px; /* topbar + tabs */
+    #root {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
       min-height: 100vh;
-      display: flex; align-items: center; justify-content: center;
-      padding-bottom: 48px;
+      width: 100%;
     }
 
-    /* ── All screens strip ── */
-    #all-screens {
-      display: flex; gap: 40px; padding: 24px 48px;
-      overflow-x: auto; align-items: flex-start;
-    }
-    .screen-label {
-      margin-top: 16px; text-align: center;
-      font-size: 10px; font-weight: 600; letter-spacing: 1px;
-      text-transform: uppercase; color: rgba(250,250,247,0.35);
-    }
-
-    /* ── App link banner ── */
+    /* Bottom bar */
     #app-link {
       position: fixed; bottom: 0; left: 0; right: 0;
-      height: 44px; background: rgba(14,17,22,0.9);
+      height: 40px;
+      background: rgba(14,17,22,0.92);
       backdrop-filter: blur(12px);
       border-top: 1px solid rgba(255,255,255,0.07);
-      display: flex; align-items: center; justify-content: center; gap: 12px;
-      font-size: 12px; color: rgba(250,250,247,0.5);
+      display: flex; align-items: center; justify-content: center; gap: 10px;
+      font-size: 11px; color: rgba(250,250,247,0.45);
     }
     #app-link a {
       color: #6ea8fe; text-decoration: none; font-weight: 600;
@@ -96,35 +53,13 @@
 </head>
 <body>
 
-  <!-- Top bar -->
-  <div id="topbar">
-    <span class="logo">🔬 DermaScan ML</span>
-    <span class="badge">UI Preview</span>
-  </div>
+  <div id="root"></div>
 
-  <!-- Tab strip -->
-  <div id="tabs">
-    <button class="tab-btn active" onclick="showScreen('all')">All screens</button>
-    <button class="tab-btn" onclick="showScreen('home')">Home</button>
-    <button class="tab-btn" onclick="showScreen('scan')">Scan</button>
-    <button class="tab-btn" onclick="showScreen('analyzing')">Analyzing</button>
-    <button class="tab-btn" onclick="showScreen('result')">Result</button>
-    <button class="tab-btn" onclick="showScreen('chat')">Chat</button>
-    <button class="tab-btn" onclick="showScreen('info')">Info</button>
-  </div>
-
-  <!-- React root -->
-  <div id="canvas">
-    <div id="root"></div>
-  </div>
-
-  <!-- Bottom bar linking to live app -->
+  <!-- Bottom bar -->
   <div id="app-link">
     <span>Live ML app →</span>
-    <!-- Replace RENDER_URL with your Render backend URL after deploying -->
     <a href="https://skin-cancer-detection-ml-project.onrender.com" target="_blank" id="backend-link">Open ML app (Render)</a>
     <script>
-      // Auto-detect: use localhost when running locally, Render URL in production
       const link = document.getElementById('backend-link');
       if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
         link.href = 'http://localhost:8501';
@@ -133,74 +68,98 @@
     </script>
   </div>
 
-  <!-- Load JSX components (Babel transpiles at runtime) -->
   <script type="text/babel" src="ios-frame.jsx"></script>
   <script type="text/babel" src="screens.jsx"></script>
 
-  <!-- Main app -->
   <script type="text/babel">
-    const { useState } = React;
+    const { useState, useEffect, useRef } = React;
 
-    const SCREENS = [
-      { key: 'home',      label: 'Home',       Comp: () => window.ScreenHome      ? <window.ScreenHome />      : null },
-      { key: 'scan',      label: 'Scan',       Comp: () => window.ScreenScan      ? <window.ScreenScan />      : null },
-      { key: 'analyzing', label: 'Analyzing',  Comp: () => window.ScreenAnalyzing ? <window.ScreenAnalyzing /> : null },
-      { key: 'result',    label: 'Result',     Comp: () => window.ScreenResult    ? <window.ScreenResult />    : null },
-      { key: 'chat',      label: 'Chat',       Comp: () => window.ScreenChat      ? <window.ScreenChat />      : null },
-      { key: 'info',      label: 'Info',       Comp: () => window.ScreenInfo      ? <window.ScreenInfo />      : null },
+    // ── Navigation map: text/aria patterns → target screen ──────────────────
+    const NAV_MAP = [
+      // home → scan
+      { pattern: /new scan|start scan|🔬/i,         target: 'scan'      },
+      // scan → analyzing (simulate analyze tap)
+      { pattern: /^analyze$|^scan now$|analyze lesion/i, target: 'analyzing' },
+      // analyzing → result (auto-advance handled separately)
+      // result → home
+      { pattern: /back to home|new scan/i,           target: 'home'      },
+      // bottom nav
+      { pattern: /^home$/i,                          target: 'home'      },
+      { pattern: /^scan$/i,                          target: 'scan'      },
+      { pattern: /ai chat|^chat$/i,                  target: 'chat'      },
+      { pattern: /info|v0 info/i,                    target: 'info'      },
+      // back arrows
+      { pattern: /^←$|^‹$|^back$/i,                 target: 'home'      },
     ];
 
-    function PhoneWrap({ label, children }) {
+    function getNavTarget(el) {
+      const text = (el.textContent || el.getAttribute('aria-label') || '').trim();
+      for (const { pattern, target } of NAV_MAP) {
+        if (pattern.test(text)) return target;
+      }
+      return null;
+    }
+
+    // ── Screen components map ─────────────────────────────────────────────────
+    const SCREEN_COMPS = {
+      home:      () => window.ScreenHome      ? <ScreenHome />      : null,
+      scan:      () => window.ScreenScan      ? <ScreenScan />      : null,
+      analyzing: () => window.ScreenAnalyzing ? <ScreenAnalyzing /> : null,
+      result:    () => window.ScreenResult    ? <ScreenResult />    : null,
+      chat:      () => window.ScreenChat      ? <ScreenChat />      : null,
+      info:      () => window.ScreenInfo      ? <ScreenInfo />      : null,
+    };
+
+    function App() {
+      const [screen, setScreen] = useState('home');
+      const frameRef = useRef(null);
+
+      // Expose navigate globally so screens can call window.navigate('scan')
+      useEffect(() => {
+        window.navigate = setScreen;
+      }, []);
+
+      // Auto-advance from analyzing → result after 2s
+      useEffect(() => {
+        if (screen === 'analyzing') {
+          const t = setTimeout(() => setScreen('result'), 2200);
+          return () => clearTimeout(t);
+        }
+      }, [screen]);
+
+      // Intercept button/div clicks inside the phone frame → navigate
+      useEffect(() => {
+        const frame = frameRef.current;
+        if (!frame) return;
+        const handler = (e) => {
+          const el = e.target.closest('button, [role="button"], a, [onclick]');
+          if (!el) return;
+          const target = getNavTarget(el);
+          if (target) { e.preventDefault(); setScreen(target); }
+        };
+        frame.addEventListener('click', handler);
+        return () => frame.removeEventListener('click', handler);
+      }, [screen]);
+
+      const Comp = SCREEN_COMPS[screen];
+
       return (
-        <div style={{ flexShrink: 0 }}>
+        <div ref={frameRef} style={{ paddingBottom: 40 }}>
           {window.IOSDevice
-            ? <IOSDevice>{children}</IOSDevice>
-            : <div style={{ width: 402, height: 874, background: '#FAFAF7', borderRadius: 44, overflow: 'hidden', boxShadow: '0 32px 64px rgba(0,0,0,0.5)' }}>{children}</div>
+            ? <IOSDevice><Comp /></IOSDevice>
+            : (
+              <div style={{
+                width: 402, height: 874, background: '#FAFAF7',
+                borderRadius: 44, overflow: 'hidden',
+                boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
+              }}>
+                <Comp />
+              </div>
+            )
           }
-          <div className="screen-label">{label}</div>
         </div>
       );
     }
-
-    function App() {
-      const [active, setActive] = useState('all');
-
-      // keep tab buttons in sync
-      React.useEffect(() => {
-        document.querySelectorAll('.tab-btn').forEach(btn => {
-          btn.classList.toggle('active', btn.textContent.toLowerCase().replace(' ', '') === active || (active === 'all' && btn.textContent === 'All screens'));
-        });
-      }, [active]);
-
-      if (active === 'all') {
-        return (
-          <div id="all-screens">
-            {SCREENS.map(({ key, label, Comp }) => (
-              <PhoneWrap key={key} label={label}>
-                <Comp />
-              </PhoneWrap>
-            ))}
-          </div>
-        );
-      }
-
-      const screen = SCREENS.find(s => s.key === active);
-      if (!screen) return null;
-      const { Comp, label } = screen;
-
-      return (
-        <PhoneWrap label={label}>
-          <Comp />
-        </PhoneWrap>
-      );
-    }
-
-    // wire up tab buttons
-    window.showScreen = (key) => {
-      ReactDOM.render(<App />, document.getElementById('root'));
-      // force re-render with new active state via a global
-      window._activeScreen = key;
-    };
 
     ReactDOM.render(<App />, document.getElementById('root'));
   </script>
