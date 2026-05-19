@@ -1,5 +1,10 @@
 {
   "version": 2,
   "outputDirectory": "frontend",
-  "rewrites": [{ "source": "/(.*)", "destination": "/$1" }]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/$1"
+    }
+  ]
 }
