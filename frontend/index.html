@@ -35,84 +35,420 @@
       width: 100%;
     }
 
-    /* Bottom bar */
-    #app-link {
-      position: fixed; bottom: 0; left: 0; right: 0;
-      height: 40px;
-      background: rgba(14,17,22,0.92);
-      backdrop-filter: blur(12px);
-      border-top: 1px solid rgba(255,255,255,0.07);
-      display: flex; align-items: center; justify-content: center; gap: 10px;
-      font-size: 11px; color: rgba(250,250,247,0.45);
+    /* ── Scan overlay (sits inside the phone frame) ── */
+    .scan-overlay {
+      position: absolute; inset: 0; z-index: 200;
+      background: #FAFAF7;
+      display: flex; flex-direction: column;
+      font-family: "Inter Tight", system-ui, sans-serif;
+      overflow-y: auto;
     }
-    #app-link a {
-      color: #6ea8fe; text-decoration: none; font-weight: 600;
+    .scan-overlay header {
+      padding: 52px 20px 16px;
+      border-bottom: 1px solid rgba(14,17,22,0.08);
+      display: flex; align-items: center; gap: 12px;
     }
-    #app-link a:hover { text-decoration: underline; }
+    .scan-overlay header button {
+      background: none; border: none; cursor: pointer;
+      font-size: 20px; color: #0E1116; padding: 0;
+    }
+    .scan-overlay header h2 {
+      font-size: 17px; font-weight: 700; color: #0E1116;
+    }
+    .scan-body { padding: 20px; flex: 1; }
+
+    /* image preview box */
+    .img-preview {
+      width: 100%; aspect-ratio: 1;
+      border-radius: 16px; overflow: hidden;
+      background: #f0f0ee;
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 16px; position: relative;
+    }
+    .img-preview img { width: 100%; height: 100%; object-fit: cover; }
+    .img-preview .placeholder {
+      display: flex; flex-direction: column; align-items: center; gap: 8px;
+      color: rgba(14,17,22,0.35); font-size: 13px;
+    }
+    .img-preview .placeholder span { font-size: 40px; }
+
+    /* upload / camera buttons */
+    .capture-row {
+      display: flex; gap: 10px; margin-bottom: 20px;
+    }
+    .capture-btn {
+      flex: 1; padding: 12px; border-radius: 12px; border: none; cursor: pointer;
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      background: #0E1116; color: #FAFAF7;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .capture-btn.secondary {
+      background: rgba(14,17,22,0.07); color: #0E1116;
+    }
+
+    /* metadata fields */
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 11px; font-weight: 600;
+      color: rgba(14,17,22,0.5); text-transform: uppercase;
+      letter-spacing: 0.6px; margin-bottom: 6px; }
+    .field input, .field select {
+      width: 100%; padding: 10px 12px; border-radius: 10px;
+      border: 1px solid rgba(14,17,22,0.14); font-family: inherit;
+      font-size: 14px; background: white; color: #0E1116;
+      outline: none;
+    }
+    .field input:focus, .field select:focus {
+      border-color: #0E1116;
+    }
+    .field-row { display: flex; gap: 10px; }
+    .field-row .field { flex: 1; }
+
+    /* analyze button */
+    .analyze-btn {
+      width: 100%; padding: 15px; border-radius: 14px; border: none;
+      cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 700;
+      background: #0E1116; color: #FAFAF7; margin-top: 8px;
+    }
+    .analyze-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Result overlay ── */
+    .result-overlay {
+      position: absolute; inset: 0; z-index: 200;
+      background: #FAFAF7;
+      display: flex; flex-direction: column;
+      font-family: "Inter Tight", system-ui, sans-serif;
+      overflow-y: auto;
+    }
+    .result-overlay header {
+      padding: 52px 20px 16px;
+      border-bottom: 1px solid rgba(14,17,22,0.08);
+      display: flex; align-items: center; gap: 12px;
+    }
+    .result-overlay header button {
+      background: none; border: none; cursor: pointer;
+      font-size: 20px; color: #0E1116; padding: 0;
+    }
+    .result-overlay header h2 {
+      font-size: 17px; font-weight: 700; color: #0E1116;
+    }
+    .result-body { padding: 20px; }
+
+    .result-img {
+      width: 100%; aspect-ratio: 1; border-radius: 16px;
+      overflow: hidden; margin-bottom: 16px;
+    }
+    .result-img img { width: 100%; height: 100%; object-fit: cover; }
+
+    .result-card {
+      background: white; border-radius: 16px;
+      border: 1px solid rgba(14,17,22,0.08);
+      padding: 16px; margin-bottom: 12px;
+    }
+    .result-label {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.8px;
+      text-transform: uppercase; color: rgba(14,17,22,0.4);
+      margin-bottom: 12px;
+    }
+    .result-verdict {
+      display: flex; align-items: center; gap: 14px; margin-bottom: 12px;
+    }
+    .verdict-icon {
+      width: 48px; height: 48px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px; flex-shrink: 0;
+    }
+    .verdict-title { font-size: 20px; font-weight: 800; color: #0E1116; }
+    .verdict-sub   { font-size: 13px; color: rgba(14,17,22,0.55); margin-top: 2px; }
+
+    .prob-bar-wrap { margin-top: 4px; }
+    .prob-bar-labels {
+      display: flex; justify-content: space-between;
+      font-size: 11px; color: rgba(14,17,22,0.45); margin-bottom: 4px;
+    }
+    .prob-bar-track {
+      height: 6px; background: rgba(14,17,22,0.08);
+      border-radius: 99px; overflow: hidden;
+    }
+    .prob-bar-fill {
+      height: 100%; border-radius: 99px; transition: width 0.6s ease;
+    }
+
+    .warning-box {
+      background: #fffbeb; border: 1px solid #fde68a;
+      border-radius: 10px; padding: 12px 14px;
+      font-size: 12px; color: #92400e; line-height: 1.5;
+      margin-top: 10px;
+    }
+
+    .home-btn {
+      width: 100%; padding: 15px; border-radius: 14px; border: none;
+      cursor: pointer; font-family: inherit; font-size: 15px; font-weight: 700;
+      background: #0E1116; color: #FAFAF7; margin-top: 4px;
+    }
+
+    /* spinner */
+    .spinner-wrap {
+      position: absolute; inset: 0; z-index: 300;
+      background: #0f172a;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      color: white; gap: 20px; text-align: center; padding: 32px;
+    }
+    .spinner {
+      width: 52px; height: 52px;
+      border: 3px solid rgba(255,255,255,0.15);
+      border-top-color: #60a5fa;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .spinner-title { font-size: 20px; font-weight: 800; }
+    .spinner-sub { font-size: 13px; color: #94a3b8; max-width: 220px; line-height: 1.6; }
   </style>
 </head>
 <body>
 
   <div id="root"></div>
 
-  <!-- Bottom bar -->
-  <div id="app-link">
-    <span>Live ML app →</span>
-    <a href="https://skin-cancer-detection-ml-project.onrender.com" target="_blank" id="backend-link">Open ML app (Render)</a>
-    <script>
-      const link = document.getElementById('backend-link');
-      if (location.hostname === 'localhost' || location.hostname === '127.0.0.1') {
-        link.href = 'http://localhost:8501';
-        link.textContent = 'Open Streamlit app on :8501';
-      }
-    </script>
-  </div>
-
   <script type="text/babel" src="ios-frame.jsx"></script>
   <script type="text/babel" src="screens.jsx"></script>
 
   <script type="text/babel">
-    const { useState, useEffect } = React;
+    const { useState, useEffect, useRef } = React;
 
-    // ── Screen components map (pass onNav so buttons work) ───────────────────
-    const SCREEN_COMPS = {
-      home:      (nav) => window.ScreenHome      ? <ScreenHome      onNav={nav} /> : null,
-      scan:      (nav) => window.ScreenScan      ? <ScreenScan      onNav={nav} /> : null,
-      analyzing: (nav) => window.ScreenAnalyzing ? <ScreenAnalyzing onNav={nav} /> : null,
-      result:    (nav) => window.ScreenResult    ? <ScreenResult    onNav={nav} /> : null,
-      chat:      (nav) => window.ScreenChat      ? <ScreenChat      onNav={nav} /> : null,
-      info:      (nav) => window.ScreenInfo      ? <ScreenInfo      onNav={nav} /> : null,
-    };
+    // ── API base URL — auto-detects local vs production ──────────────────────
+    const API_BASE = (location.hostname === 'localhost' || location.hostname === '127.0.0.1')
+      ? 'http://localhost:8000'
+      : 'https://skin-cancer-detection-ml-project.onrender.com';
 
-    function App() {
-      const [screen, setScreen] = useState('home');
+    const LOCALIZATIONS = [
+      'back','lower extremity','trunk','upper extremity','abdomen',
+      'face','chest','foot','unknown','neck','scalp','hand','ear','genital','acral',
+    ];
 
-      // Expose navigate globally so screens can call window.navigate('scan')
-      useEffect(() => {
-        window.navigate = setScreen;
-      }, []);
+    // ── Scan overlay component ────────────────────────────────────────────────
+    function ScanOverlay({ onBack, onResult }) {
+      const [imageFile,     setImageFile]     = useState(null);
+      const [imagePreview,  setImagePreview]  = useState(null);
+      const [age,           setAge]           = useState(45);
+      const [sex,           setSex]           = useState('male');
+      const [localization,  setLocalization]  = useState('back');
+      const [loading,       setLoading]       = useState(false);
+      const fileInputRef    = useRef(null);
+      const cameraInputRef  = useRef(null);
 
-      // Auto-advance from analyzing → result after 2s
-      useEffect(() => {
-        if (screen === 'analyzing') {
-          const t = setTimeout(() => setScreen('result'), 2200);
-          return () => clearTimeout(t);
+      function onFileChange(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        setImageFile(file);
+        setImagePreview(URL.createObjectURL(file));
+      }
+
+      async function analyze() {
+        if (!imageFile) return;
+        setLoading(true);
+        try {
+          const form = new FormData();
+          form.append('file', imageFile);
+          form.append('age', age);
+          form.append('sex', sex);
+          form.append('localization', localization);
+
+          const res  = await fetch(`${API_BASE}/predict`, { method: 'POST', body: form });
+          const data = await res.json();
+          onResult({ ...data, imagePreview });
+        } catch (err) {
+          alert('Could not reach the ML server. Make sure the backend is running.');
+        } finally {
+          setLoading(false);
         }
-      }, [screen]);
-
-      const Comp = SCREEN_COMPS[screen];
+      }
 
       return (
-        <div style={{ paddingBottom: 40 }}>
+        <div className="scan-overlay">
+          {loading && (
+            <div className="spinner-wrap">
+              <div className="spinner" />
+              <div className="spinner-title">Analyzing lesion…</div>
+              <div className="spinner-sub">Extracting HOG features and running the classifier.</div>
+            </div>
+          )}
+
+          <header>
+            <button onClick={onBack}>←</button>
+            <h2>New Scan</h2>
+          </header>
+
+          <div className="scan-body">
+            {/* Image preview */}
+            <div className="img-preview">
+              {imagePreview
+                ? <img src={imagePreview} alt="lesion" />
+                : <div className="placeholder"><span>📷</span>No image selected</div>
+              }
+            </div>
+
+            {/* Capture buttons */}
+            <div className="capture-row">
+              <button className="capture-btn" onClick={() => cameraInputRef.current.click()}>
+                📷 Camera
+              </button>
+              <button className="capture-btn secondary" onClick={() => fileInputRef.current.click()}>
+                🖼 Gallery
+              </button>
+            </div>
+
+            {/* Hidden inputs */}
+            <input ref={cameraInputRef} type="file" accept="image/*" capture="environment"
+              style={{ display:'none' }} onChange={onFileChange} />
+            <input ref={fileInputRef} type="file" accept="image/jpg,image/jpeg,image/png"
+              style={{ display:'none' }} onChange={onFileChange} />
+
+            {/* Metadata */}
+            <div className="field-row">
+              <div className="field">
+                <label>Age</label>
+                <input type="number" min="0" max="120" value={age}
+                  onChange={e => setAge(e.target.value)} />
+              </div>
+              <div className="field">
+                <label>Sex</label>
+                <select value={sex} onChange={e => setSex(e.target.value)}>
+                  <option value="male">Male</option>
+                  <option value="female">Female</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+              </div>
+            </div>
+            <div className="field">
+              <label>Localization</label>
+              <select value={localization} onChange={e => setLocalization(e.target.value)}>
+                {LOCALIZATIONS.map(l => <option key={l} value={l}>{l}</option>)}
+              </select>
+            </div>
+
+            <button className="analyze-btn" disabled={!imageFile || loading} onClick={analyze}>
+              🔬 Analyze
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Result overlay component ──────────────────────────────────────────────
+    function ResultOverlay({ result, onHome }) {
+      const isCancer   = result.prediction === 'cancerous';
+      const prob       = result.probability;
+      const barWidth   = Math.round(prob * 100);
+      const barColor   = isCancer ? '#ef4444' : '#10b981';
+      const iconBg     = isCancer ? '#fee2e2' : '#d1fae5';
+      const icon       = isCancer ? '🔴' : '✅';
+      const confPct    = isCancer
+        ? `${(prob * 100).toFixed(1)}%`
+        : `${((1 - prob) * 100).toFixed(1)}%`;
+
+      return (
+        <div className="result-overlay">
+          <header>
+            <button onClick={onHome}>←</button>
+            <h2>Result</h2>
+          </header>
+          <div className="result-body">
+            {result.imagePreview && (
+              <div className="result-img">
+                <img src={result.imagePreview} alt="scanned lesion" />
+              </div>
+            )}
+
+            <div className="result-card">
+              <div className="result-label">Model Prediction · Confidence {confPct}</div>
+              <div className="result-verdict">
+                <div className="verdict-icon" style={{ background: iconBg }}>{icon}</div>
+                <div>
+                  <div className="verdict-title">{result.label}</div>
+                  <div className="verdict-sub">
+                    {isCancer
+                      ? 'Features consistent with malignant lesion detected.'
+                      : 'No strong indicators of malignancy found.'}
+                  </div>
+                </div>
+              </div>
+              <div className="prob-bar-wrap">
+                <div className="prob-bar-labels">
+                  <span>P(cancerous)</span>
+                  <span style={{ fontWeight: 600, color: barColor }}>
+                    {(prob * 100).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="prob-bar-track">
+                  <div className="prob-bar-fill"
+                    style={{ width: `${barWidth}%`, background: barColor }} />
+                </div>
+              </div>
+              <div className="warning-box">
+                ⚠️ <strong>Important:</strong> This tool does not replace professional
+                dermatological diagnosis. Consult a doctor if you have any concerns.
+              </div>
+            </div>
+
+            <button className="home-btn" onClick={onHome}>🏠 Back to Home</button>
+          </div>
+        </div>
+      );
+    }
+
+    // ── Main app ──────────────────────────────────────────────────────────────
+    function App() {
+      const [screen, setScreen] = useState('home');
+      const [result, setResult] = useState(null);
+
+      useEffect(() => { window.navigate = setScreen; }, []);
+
+      // intercept "scan" navigation → show our real scan overlay instead
+      function handleNav(target) {
+        if (target === 'scan') { setScreen('scan'); return; }
+        setResult(null);
+        setScreen(target);
+      }
+
+      function handleResult(data) {
+        setResult(data);
+        setScreen('result');
+      }
+
+      const SCREEN_COMPS = {
+        home:      () => window.ScreenHome      ? <ScreenHome      onNav={handleNav} /> : null,
+        analyzing: () => window.ScreenAnalyzing ? <ScreenAnalyzing onNav={handleNav} /> : null,
+        chat:      () => window.ScreenChat      ? <ScreenChat      onNav={handleNav} /> : null,
+        info:      () => window.ScreenInfo      ? <ScreenInfo      onNav={handleNav} /> : null,
+      };
+
+      function renderContent() {
+        // Real scan form
+        if (screen === 'scan') {
+          return <ScanOverlay onBack={() => setScreen('home')} onResult={handleResult} />;
+        }
+        // Real result view
+        if (screen === 'result' && result) {
+          return <ResultOverlay result={result} onHome={() => { setResult(null); setScreen('home'); }} />;
+        }
+        // Design mockup screens
+        const Comp = SCREEN_COMPS[screen];
+        return Comp ? Comp() : null;
+      }
+
+      return (
+        <div style={{ paddingBottom: 0 }}>
           {window.IOSDevice
-            ? <IOSDevice>{Comp(setScreen)}</IOSDevice>
+            ? <IOSDevice><div style={{ position:'relative', height:'100%' }}>{renderContent()}</div></IOSDevice>
             : (
               <div style={{
                 width: 402, height: 874, background: '#FAFAF7',
                 borderRadius: 44, overflow: 'hidden',
                 boxShadow: '0 32px 64px rgba(0,0,0,0.5)',
+                position: 'relative',
               }}>
-                {Comp(setScreen)}
+                {renderContent()}
               </div>
             )
           }

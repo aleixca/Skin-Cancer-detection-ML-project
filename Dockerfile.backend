@@ -12,15 +12,11 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Only copy what the app needs at inference time
-COPY app.py .
+COPY api.py .
 COPY model.pkl .
 
-EXPOSE 8501
+EXPOSE 8000
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:8000/ || exit 1
 
-CMD ["python", "-m", "streamlit", "run", "app.py", \
-     "--server.port=8501", \
-     "--server.address=0.0.0.0", \
-     "--server.headless=true", \
-     "--server.enableCORS=false"]
+CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]

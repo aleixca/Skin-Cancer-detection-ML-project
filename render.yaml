@@ -5,7 +5,7 @@ services:
     dockerfilePath: ./Dockerfile.backend
     dockerContext: .
     plan: free
-    healthCheckPath: /_stcore/health
+    healthCheckPath: /
     envVars:
       - key: PORT
-        value: 8501
+        value: 8000
