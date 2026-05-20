@@ -11,9 +11,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Only copy what the app needs at inference time
+# Pre-download the sentence-transformers model so startup is instant
+RUN python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('all-MiniLM-L6-v2')"
+
+# Copy app files
 COPY api.py .
 COPY model.pkl .
+COPY rag/ ./rag/
+
+# Pre-build the RAG embeddings index
+RUN python rag/build_index.py
 
 EXPOSE 8000
 
