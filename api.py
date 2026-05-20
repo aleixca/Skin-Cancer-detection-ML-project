@@ -2,6 +2,9 @@
 api.py — FastAPI inference server with RAG chatbot.
 """
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)   # suppress sklearn version mismatch
+
 import os
 import json
 import cv2
