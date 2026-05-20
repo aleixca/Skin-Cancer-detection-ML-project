@@ -1,12 +1,16 @@
 """
 api.py — FastAPI inference server with RAG chatbot.
+Models load AFTER uvicorn binds the port (lifespan) so Render
+doesn't time out waiting for an open port.
 """
 
 import warnings
-warnings.filterwarnings("ignore", category=UserWarning)   # suppress sklearn version mismatch
+warnings.filterwarnings("ignore", category=UserWarning)
 
 import os
 import json
+from contextlib import asynccontextmanager
+
 import cv2
 import numpy as np
 import pandas as pd
@@ -14,35 +18,43 @@ import joblib
 from skimage.feature import hog as skimage_hog
 from sentence_transformers import SentenceTransformer
 
-from fastapi import FastAPI, File, UploadFile, Form, Body
+from fastapi import FastAPI, File, UploadFile, Form
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 # ── Paths ─────────────────────────────────────────────────────────────────────
-BASE_DIR    = os.path.dirname(__file__)
-MODEL_PATH  = os.path.join(BASE_DIR, "model.pkl")
-EMBED_FILE  = os.path.join(BASE_DIR, "rag", "embeddings.npy")
-DOCS_FILE   = os.path.join(BASE_DIR, "rag", "docs.json")
+BASE_DIR   = os.path.dirname(__file__)
+MODEL_PATH = os.path.join(BASE_DIR, "model.pkl")
+EMBED_FILE = os.path.join(BASE_DIR, "rag", "embeddings.npy")
+DOCS_FILE  = os.path.join(BASE_DIR, "rag", "docs.json")
 
-# ── Load ML model ─────────────────────────────────────────────────────────────
-print("Loading ML model...")
-bundle     = joblib.load(MODEL_PATH)
-rf         = bundle["model"]
-columns    = bundle["columns"]
-age_median = bundle["age_median"]
-threshold  = bundle["threshold"]
+# ── Global model state (populated during lifespan startup) ────────────────────
+state = {}
 
-# ── Load RAG index ────────────────────────────────────────────────────────────
-print("Loading RAG index...")
-embeddings  = np.load(EMBED_FILE)                          # (N, 384)
-with open(DOCS_FILE, encoding="utf-8") as f:
-    docs = json.load(f)
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Load all heavy models AFTER uvicorn has bound the port."""
+    print("Loading ML model...")
+    bundle = joblib.load(MODEL_PATH)
+    state["rf"]         = bundle["model"]
+    state["columns"]    = bundle["columns"]
+    state["age_median"] = bundle["age_median"]
+    state["threshold"]  = bundle["threshold"]
 
-print("Loading sentence-transformer...")
-embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+    print("Loading RAG index...")
+    state["embeddings"] = np.load(EMBED_FILE)
+    with open(DOCS_FILE, encoding="utf-8") as f:
+        state["docs"] = json.load(f)
+
+    print("Loading sentence-transformer...")
+    state["embed_model"] = SentenceTransformer("all-MiniLM-L6-v2")
+
+    print("All models ready.")
+    yield
+    state.clear()
 
 # ── App ───────────────────────────────────────────────────────────────────────
-app = FastAPI(title="DermaScan ML API")
+app = FastAPI(title="DermaScan ML API", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -55,7 +67,12 @@ app.add_middleware(
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.get("/")
 def root():
-    return {"status": "ok", "model": "HAM10000 Random Forest", "threshold": threshold}
+    ready = "rf" in state
+    return {
+        "status":    "ok" if ready else "loading",
+        "model":     "HAM10000 Random Forest",
+        "threshold": state.get("threshold", "loading"),
+    }
 
 
 # ── Predict ───────────────────────────────────────────────────────────────────
@@ -66,6 +83,9 @@ async def predict(
     sex:          str        = Form(default="male"),
     localization: str        = Form(default="back"),
 ):
+    if "rf" not in state:
+        return {"error": "Model still loading, please retry in a few seconds."}
+
     contents = await file.read()
     nparr    = np.frombuffer(contents, np.uint8)
     img      = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
@@ -85,21 +105,21 @@ async def predict(
     )
 
     meta_df  = pd.DataFrame([{
-        "age":          float(age) if age else age_median,
+        "age":          float(age) if age else state["age_median"],
         "sex":          sex,
         "localization": localization,
     }])
     meta_enc = pd.get_dummies(meta_df, columns=["sex", "localization"])
-    meta_enc = meta_enc.reindex(columns=columns, fill_value=0)
+    meta_enc = meta_enc.reindex(columns=state["columns"], fill_value=0)
 
     X           = np.concatenate([feat.reshape(1, -1), meta_enc.values], axis=1)
-    prob_cancer = float(rf.predict_proba(X)[0][0])
-    prediction  = "cancerous" if prob_cancer >= threshold else "non_cancerous"
+    prob_cancer = float(state["rf"].predict_proba(X)[0][0])
+    prediction  = "cancerous" if prob_cancer >= state["threshold"] else "non_cancerous"
 
     return {
         "prediction":  prediction,
         "probability": round(prob_cancer, 4),
-        "threshold":   threshold,
+        "threshold":   state["threshold"],
         "label":       "Potentially Cancerous" if prediction == "cancerous" else "Non-Cancerous",
     }
 
@@ -110,24 +130,20 @@ class ChatRequest(BaseModel):
 
 @app.post("/chat")
 def chat(req: ChatRequest):
+    if "embed_model" not in state:
+        return {"reply": "Assistant is still loading, please retry in a few seconds.", "sources": []}
+
     query = req.message.strip()
     if not query:
-        return {"reply": "Please ask a question about skin lesions, scanning tips, or your results."}
+        return {"reply": "Please ask a question about skin lesions, scanning tips, or your results.", "sources": []}
 
-    # 1. Embed query
-    q_emb = embed_model.encode(query, normalize_embeddings=True)  # (384,)
-
-    # 2. Cosine similarity (embeddings are already L2-normalised → dot product = cosine sim)
-    scores = embeddings @ q_emb  # (N,)
-
-    # 3. Top 3 chunks
+    q_emb  = state["embed_model"].encode(query, normalize_embeddings=True)
+    scores = state["embeddings"] @ q_emb
     top_idx   = np.argsort(scores)[::-1][:3]
-    top_docs  = [(docs[i], float(scores[i])) for i in top_idx]
+    top_docs  = [(state["docs"][i], float(scores[i])) for i in top_idx]
 
-    # 4. Build reply from retrieved chunks
     best_doc, best_score = top_docs[0]
 
-    # If confidence is very low, give a fallback
     if best_score < 0.25:
         return {
             "reply": (
@@ -138,18 +154,13 @@ def chat(req: ChatRequest):
             "sources": [],
         }
 
-    # Compose response using top 1–2 retrieved chunks
     reply_parts = [best_doc["content"]]
-
-    # Add second chunk if highly relevant and from a different topic
     if len(top_docs) > 1:
         second_doc, second_score = top_docs[1]
         if second_score > 0.40 and second_doc["id"] != best_doc["id"]:
             reply_parts.append("\n\n" + second_doc["content"])
 
-    reply = "".join(reply_parts)
-
     return {
-        "reply":   reply,
+        "reply":   "".join(reply_parts),
         "sources": [{"title": d["title"], "score": round(s, 3)} for d, s in top_docs[:2]],
     }
