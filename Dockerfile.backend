@@ -24,6 +24,7 @@ RUN python rag/build_index.py
 
 EXPOSE 8000
 
-HEALTHCHECK CMD curl --fail http://localhost:8000/ || exit 1
+HEALTHCHECK CMD curl --fail http://localhost:${PORT:-8000}/ || exit 1
 
-CMD ["uvicorn", "api:app", "--host", "0.0.0.0", "--port", "8000"]
+# Use $PORT env var so Render can bind to its assigned port
+CMD ["sh", "-c", "uvicorn api:app --host 0.0.0.0 --port ${PORT:-8000}"]
