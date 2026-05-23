@@ -1,9 +1,0 @@
-FROM nginx:alpine
-
-# Copy the static frontend files
-COPY frontend/index.html /usr/share/nginx/html/index.html
-COPY screens.jsx         /usr/share/nginx/html/screens.jsx
-COPY ios-frame.jsx       /usr/share/nginx/html/ios-frame.jsx
-COPY design-canvas.jsx   /usr/share/nginx/html/design-canvas.jsx
-
-EXPOSE 80
