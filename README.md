@@ -1,120 +1,213 @@
 # DermaScan ML
 
-A mobile-style web app that uses a Random Forest trained on the HAM10000 dataset to classify skin lesion images as **cancerous** or **non-cancerous**.
+DermaScan ML is a full-stack university prototype for skin-lesion screening. It combines a FastAPI inference backend, a browser-based mobile UI, and a small retrieval chatbot that explains scan results, photo quality tips, and basic dermatology concepts.
 
-Built for the Machine Learning university course (V0 delivery).
+The project is designed as a learning prototype, not a medical device. It should never be used as a substitute for professional dermatological diagnosis.
 
----
+## What It Demonstrates
 
-## Project Structure
+- Image classification pipeline using HOG features, patient metadata, and a Random Forest model
+- FastAPI backend with lazy model loading to keep free-tier deployments responsive
+- Static React frontend with upload/camera flow, result view, and chat interface
+- Retrieval-augmented FAQ assistant using a local TF-IDF index
+- Production-oriented deployment split between Render for the API and Vercel/static hosting for the frontend
+- Practical debugging around model serialization, dependency versions, and cold-start memory limits
 
+## Tech Stack
+
+| Layer | Tools |
+| --- | --- |
+| Backend | FastAPI, Uvicorn, Pydantic |
+| ML | scikit-learn, scikit-image, OpenCV, joblib, NumPy |
+| Frontend | React 18 UMD, Babel standalone, HTML/CSS |
+| Chat/RAG | TF-IDF retrieval over a curated local knowledge base |
+| Deployment | Docker, Render, Vercel/static hosting |
+
+## Repository Structure
+
+```text
+.
+|-- api.py                 # FastAPI app, prediction endpoint, chat endpoint
+|-- train_model.py         # Rebuilds the model.pkl bundle from a prepared dataset
+|-- model.pkl              # Serialized Random Forest model bundle
+|-- rag/
+|   `-- knowledge_base.py  # Local documents used by the chatbot retriever
+|-- frontend/
+|   |-- index.html         # Static React app shell
+|   |-- screens.jsx        # UI screens
+|   |-- ios-frame.jsx      # Phone-style frame component
+|   `-- design-canvas.jsx  # Design/prototype support
+|-- Dockerfile.backend     # Backend container for Render
+|-- render.yaml            # Render service config
+|-- vercel.json            # Static frontend hosting config
+|-- requirements.txt       # Runtime Python dependencies
+|-- requirements-training.txt
+`-- tests/
+    `-- test_api.py        # Lightweight API smoke tests
 ```
-Project/
-├── images/
-│   ├── train/
-│   │   ├── cancerous/
-│   │   └── non_cancerous/
-│   └── test/
-│       ├── cancerous/
-│       └── non_cancerous/
-├── HAM10000_metadata       # CSV with image labels and patient info
-├── dataset_images.zip      # Pre-sorted image archive (train/test split)
-├── train_model.py          # Step 1 — trains and saves the ML model
-├── app.py                  # Step 2 — Streamlit web app
-├── sort_images.py          # Utility: sorts raw images into cancerous/non_cancerous
-└── train_test_split.py     # Utility: splits images 70% train / 30% test
+
+## API
+
+### `GET /health`
+
+Returns a simple health check.
+
+```json
+{ "status": "ok" }
 ```
 
----
+### `POST /predict`
 
-## Requirements
+Accepts a lesion image plus metadata and returns a binary prediction.
 
-- Python 3.10+
-- The following packages (install with the command below):
+Form fields:
+
+- `file`: uploaded JPG/PNG image
+- `age`: patient age, default `45`
+- `sex`: `male`, `female`, or `unknown`
+- `localization`: body location, default `back`
+
+Example response:
+
+```json
+{
+  "prediction": "non_cancerous",
+  "probability": 0.1372,
+  "threshold": 0.21448,
+  "label": "Non-Cancerous"
+}
+```
+
+### `POST /chat`
+
+Answers questions about scan quality, result interpretation, warning signs, and model limitations using a local retrieval index.
+
+```json
+{
+  "message": "How do I take a better photo?"
+}
+```
+
+## Run Locally
+
+### 1. Create a Python environment
+
+Use Python 3.11. The Dockerfile and CI both target 3.11, and the pinned ML dependencies are not guaranteed to install cleanly on newer Python versions such as 3.14.
 
 ```bash
-C:\Python314\python.exe -m pip install streamlit opencv-python scikit-learn scikit-image joblib numpy pandas matplotlib seaborn
+python3.11 -m venv .venv
+.venv\Scripts\activate
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt
 ```
 
----
-
-## Setup & Running
-
-### Step 1 — Extract the dataset
-
-If the `images/` folder does not exist yet, extract `dataset_images.zip`:
+On Linux/macOS, activate with:
 
 ```bash
-C:\Python314\python.exe -c "import zipfile; zipfile.ZipFile('dataset_images.zip').extractall('.')"
+source .venv/bin/activate
 ```
 
-This creates `images/train/cancerous`, `images/train/non_cancerous`, `images/test/cancerous`, and `images/test/non_cancerous`.
-
----
-
-### Step 2 — Train the model (run once, ~5–10 min)
+### 2. Start the backend
 
 ```bash
-C:\Python314\python.exe train_model.py
+uvicorn api:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-This will:
-1. Load all images at 128×128 resolution
-2. Train a baseline Random Forest on raw pixels
-3. Extract HOG features + encode patient metadata (age, sex, localization)
-4. Train an optimized Random Forest (500 trees, balanced class weights)
-5. Evaluate both models and print classification reports
-6. Save the final model to **`model.pkl`**
-
-You only need to run this once. The app loads `model.pkl` at startup.
-
----
-
-### Step 3 — Launch the app
+Check that it is alive:
 
 ```bash
-C:\Python314\python.exe -m streamlit run app.py
+curl http://127.0.0.1:8000/health
 ```
 
-Then open your browser at **http://localhost:8501**
+### 3. Open the frontend
 
----
+Open `frontend/index.html` in a browser. When running locally, the frontend automatically calls:
 
-## How It Works
+```text
+http://localhost:8000
+```
 
-### ML Model
-| | Details |
-|---|---|
-| **Dataset** | HAM10000 — 10,015 dermatoscopic images |
-| **Split** | 70% train / 30% test (stratified by class) |
-| **Classes** | `cancerous` (mel, bcc, akiec) · `non_cancerous` (nv, bkl, df, vasc) |
-| **Features** | HOG (9 orientations, 16×16 cells) + patient age, sex, localization |
-| **Classifier** | Random Forest — 500 trees, max_depth=15, balanced class weights |
-| **Threshold** | 0.21448 (Youden-optimal, tuned for high cancer recall) |
+## Testing
 
-### App Pages
-- **Home** — recent scan history
-- **Scan** — upload or photograph a lesion, enter patient info, run analysis
-- **Result** — real model prediction with cancer probability bar
-- **AI Chat** — assistant with photo tips and result explanations
-- **Info** — project overview and version roadmap
+Install development dependencies and run the smoke tests:
 
----
+```bash
+python -m pip install -r requirements-dev.txt
+pytest
+```
 
-## Dataset Label Mapping
+The tests intentionally avoid loading `model.pkl`; they verify that the FastAPI app imports correctly and exposes the health/root endpoints. This keeps CI fast and catches broken imports or missing runtime dependencies.
 
-| Code | Diagnosis | Class |
-|---|---|---|
-| `mel` | Melanoma | Cancerous |
-| `bcc` | Basal Cell Carcinoma | Cancerous |
-| `akiec` | Actinic Keratoses / Bowen's disease | Cancerous |
-| `nv` | Melanocytic Nevi (moles) | Non-cancerous |
-| `bkl` | Benign Keratosis-like Lesions | Non-cancerous |
-| `df` | Dermatofibroma | Non-cancerous |
-| `vasc` | Vascular Lesions | Non-cancerous |
+## Training
 
----
+The repository includes `train_model.py` so the serialized model can be rebuilt from the prepared HAM10000 dataset.
 
-## Disclaimer
+Expected local dataset layout:
 
-This tool is a university prototype and does **not** constitute professional medical advice. Always consult a qualified dermatologist for any skin concerns.
+```text
+images/
+|-- train/
+|   |-- cancerous/
+|   `-- non_cancerous/
+`-- test/
+    |-- cancerous/
+    `-- non_cancerous/
+HAM10000_metadata.csv
+```
+
+Install the training dependencies:
+
+```bash
+python -m pip install -r requirements-training.txt
+```
+
+Train with default paths:
+
+```bash
+python train_model.py
+```
+
+Or pass explicit paths:
+
+```bash
+python train_model.py --train-dir images/train --test-dir images/test --metadata HAM10000_metadata.csv --output model.pkl
+```
+
+The output bundle contains:
+
+- `model`: trained Random Forest classifier
+- `columns`: metadata feature columns used at inference time
+- `age_median`: training median used to fill missing age values
+- `threshold`: probability threshold for the final cancerous/non-cancerous decision
+
+## Model Notes
+
+- Dataset: HAM10000 dermatoscopic image dataset
+- Classes: binary mapping of malignant-like labels to `cancerous` and benign labels to `non_cancerous`
+- Features: HOG image descriptors plus patient age, sex, and lesion localization metadata
+- Classifier: Random Forest
+- Threshold: tuned for high recall so suspicious cases are more likely to be flagged
+
+The raw image dataset is not included because it is large. The serialized model bundle is included so the API can run without retraining, while `train_model.py` documents how the bundle is produced.
+
+## Deployment
+
+The backend is configured for Render using `Dockerfile.backend` and `render.yaml`.
+
+The API is currently expected at:
+
+```text
+https://skin-cancer-detection-ml-project.onrender.com
+```
+
+The frontend can be hosted as static files. In production, `frontend/index.html` points API calls to the Render backend.
+
+## Limitations
+
+- This is a university prototype and not a clinical diagnostic system.
+- Smartphone images differ from dermatoscopic images used in the dataset.
+- The model is sensitive to lighting, focus, and framing.
+- Dataset bias can affect accuracy across skin tones and lesion types.
+- A low threshold improves recall but increases false positives.
+
+Always consult a dermatologist for any lesion that changes, bleeds, itches, grows quickly, or looks unusual.

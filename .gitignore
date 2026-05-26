@@ -1,4 +1,4 @@
-# Large dataset files — do not commit
+# Large dataset files - do not commit
 *.zip
 images/
 cancerous/
@@ -6,18 +6,25 @@ non_cancerous/
 train/
 test/
 
-
-
-# Python cache
+# Python cache and test output
 __pycache__/
 *.pyc
 *.pyo
+.pytest_cache/
+.coverage
+htmlcov/
 
-# OS / editor
+# OS and editor files
 .DS_Store
 Thumbs.db
+.idea/
+.vscode/
 
-# Secrets / env
+# Secrets and local environments
 .env
+.env.*
+.venv/
+venv/
 
-.vercel
+# Hosting metadata
+.vercel/
